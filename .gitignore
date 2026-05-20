@@ -1,0 +1,54 @@
+# ── Environment & Secrets ────────────────────────────────────────────────────
+.env
+.env.local
+.env.production
+*.env
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ── Virtual Environments ─────────────────────────────────────────────────────
+venv/
+env/
+.venv/
+.env/
+ENV/
+
+# ── Jupyter Notebook ─────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ── Generated Files ──────────────────────────────────────────────────────────
+*.png
+*.jpg
+*.jpeg
+*.html
+*.csv
+
+# ── Model Files (stored in MongoDB) ──────────────────────────────────────────
+models/
+*.pkl
+*.joblib
+*.h5
+
+# ── OS Files ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE ──────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
