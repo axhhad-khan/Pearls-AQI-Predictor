@@ -1,0 +1,60 @@
+# .github/workflows/pipelines.yml
+# Runs the feature pipeline every hour and the training pipeline every day.
+
+name: AQI Pipelines
+
+on:
+  schedule:
+    - cron: "0 * * * *"      # every hour  → feature pipeline
+    - cron: "0 2 * * *"      # 02:00 UTC daily → training pipeline
+  workflow_dispatch:          # allow manual trigger
+
+jobs:
+  # ── Feature pipeline ────────────────────────────────────────────────────────
+  feature_pipeline:
+    name: "Fetch & Store Features"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run feature pipeline
+        env:
+          MONGO_URI:     ${{ secrets.MONGO_URI }}
+          MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
+          CITY_NAME:     ${{ secrets.CITY_NAME }}
+          LATITUDE:      ${{ secrets.LATITUDE }}
+          LONGITUDE:     ${{ secrets.LONGITUDE }}
+        run: python run_feature_pipeline.py
+
+  # ── Training pipeline (daily only) ──────────────────────────────────────────
+  training_pipeline:
+    name: "Train ML Models"
+    runs-on: ubuntu-latest
+    # Run this job only when triggered by the 02:00 cron
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && contains(github.event.schedule, '0 2'))
+    needs: feature_pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run training pipeline
+        env:
+          MONGO_URI:     ${{ secrets.MONGO_URI }}
+          MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
+          CITY_NAME:     ${{ secrets.CITY_NAME }}
+        run: python run_training_pipeline.py
