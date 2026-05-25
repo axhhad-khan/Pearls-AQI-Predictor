@@ -1,28 +1,24 @@
-"""
-db.py  -  MongoDB helpers (feature store + model registry).
-"""
-
-import os
-import logging
-import joblib
-import io
-import pickle
+"""db.py - MongoDB Feature Store + Model Registry"""
+import os, io, logging
 from datetime import datetime
 
+import dns.resolver
+dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
+dns.resolver.default_resolver.nameservers = ['8.8.8.8', '8.8.4.4']
 
+import certifi
+import joblib
 import pandas as pd
 from pymongo import MongoClient, ASCENDING, DESCENDING
-from pymongo.errors import BulkWriteError
 from bson import Binary
 from dotenv import load_dotenv
 
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-# ── Connection ───────────────────────────────────────────────────────────────
 _client = None
 
-def get_client() -> MongoClient:
+def get_client():
     global _client
     if _client is None:
         uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
@@ -32,28 +28,30 @@ def get_client() -> MongoClient:
             connectTimeoutMS=30000,
             socketTimeoutMS=30000,
             tls=True,
+            tlsCAFile=certifi.where(),
             tlsAllowInvalidCertificates=True,
-            tlsAllowInvalidHostnames=True,
         )
     return _client
 
-
 def get_db():
-    db_name = os.getenv("MONGO_DB_NAME", "aqi_predictor")
-    return get_client()[db_name]
+    return get_client()[os.getenv("MONGO_DB_NAME", "aqi_predictor")]
 
-
-# ── Feature Store ────────────────────────────────────────────────────────────
-def upsert_features(df, city="default"):
-    db   = get_db()
-    col  = db["features"]
+# ── Feature Store ─────────────────────────────────────────────────────────────
+def upsert_features(df: pd.DataFrame, city: str = "default") -> int:
+    db  = get_db()
+    col = db["features"]
     col.create_index([("city", ASCENDING), ("timestamp", ASCENDING)], unique=True)
 
     records = df.copy()
     records["city"]      = city
-    records["timestamp"] = records["timestamp"].astype(str)
-    records = records.where(df.notna(), other=None)
-    docs = records.to_dict(orient="records")
+    # Normalize timestamp to string
+    if pd.api.types.is_datetime64_any_dtype(records["timestamp"]):
+        records["timestamp"] = records["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        records["timestamp"] = pd.to_datetime(records["timestamp"]).dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    records = records.where(pd.notna(records), other=None)
+    docs    = records.to_dict(orient="records")
 
     inserted = 0
     for doc in docs:
@@ -67,59 +65,53 @@ def upsert_features(df, city="default"):
         except Exception as e:
             logger.warning(f"Upsert error: {e}")
 
-    logger.info(f"Upserted {inserted} feature rows for city='{city}'")
+    logger.info(f"Upserted {inserted} rows for city='{city}'")
     return inserted
 
-
-def load_features(city="default", limit=5000):
+def load_features(city: str = "default", limit: int = 5000) -> pd.DataFrame:
     db  = get_db()
     col = db["features"]
-    cursor = col.find({"city": city}, {"_id": 0}).sort("timestamp", DESCENDING).limit(limit)
-    docs = list(cursor)
+    docs = list(col.find({"city": city}, {"_id": 0})
+                   .sort("timestamp", DESCENDING)
+                   .limit(limit))
     if not docs:
-        return __import__("pandas").DataFrame()
-    df = __import__("pandas").DataFrame(docs)
-    df["timestamp"] = __import__("pandas").to_datetime(df["timestamp"])
+        return pd.DataFrame()
+    df = pd.DataFrame(docs)
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
     df.sort_values("timestamp", inplace=True)
     df.reset_index(drop=True, inplace=True)
     return df
 
-
-def load_forecast_features(city="default"):
+def load_forecast_features(city: str = "default") -> pd.DataFrame:
     df  = load_features(city, limit=200)
-    now = __import__("pandas").Timestamp.utcnow().tz_localize(None)
-    if df.empty:
-        return df
-    return df[df["timestamp"] >= now].copy()
+    now = pd.Timestamp.utcnow().tz_localize(None)
+    return df[df["timestamp"] >= now].copy() if not df.empty else df
 
-
-def save_model(model, model_name, metrics, feature_cols):
+# ── Model Registry ────────────────────────────────────────────────────────────
+def save_model(model, name: str, metrics: dict, feature_cols: list):
     db  = get_db()
     col = db["models"]
     buf = io.BytesIO()
     joblib.dump(model, buf)
     buf.seek(0)
     doc = {
-        "name":         model_name,
+        "name":         name,
         "trained_at":   datetime.utcnow().isoformat(),
         "metrics":      metrics,
         "feature_cols": feature_cols,
         "binary":       Binary(buf.read()),
     }
-    col.update_one({"name": model_name}, {"$set": doc}, upsert=True)
-    logger.info(f"Saved model '{model_name}' to registry. metrics={metrics}")
+    col.update_one({"name": name}, {"$set": doc}, upsert=True)
+    logger.info(f"Saved model '{name}': {metrics}")
 
-
-def load_model(model_name):
+def load_model(name: str):
     db  = get_db()
     col = db["models"]
-    doc = col.find_one({"name": model_name})
-    if doc is None:
+    doc = col.find_one({"name": name})
+    if not doc:
         return None, None, None
-    buf   = io.BytesIO(doc["binary"])
-    model = joblib.load(buf)
+    model = joblib.load(io.BytesIO(doc["binary"]))
     return model, doc.get("feature_cols", []), doc.get("metrics", {})
-
 
 def list_models():
     db  = get_db()

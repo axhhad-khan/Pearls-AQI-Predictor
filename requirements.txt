@@ -4,11 +4,11 @@ numpy
 scikit-learn
 xgboost
 lightgbm
-pymongo-4.4.1
+pymongo
+dnspython
+certifi
 requests
 plotly
 shap
 python-dotenv
-schedule
 joblib
-certifi
