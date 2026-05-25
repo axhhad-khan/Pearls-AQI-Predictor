@@ -1,7 +1,6 @@
 """run_training_pipeline.py — daily CI/CD job"""
 import os, logging, dns.resolver
 
-# Fix DNS for GitHub Actions / cloud environments
 dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
 dns.resolver.default_resolver.nameservers = ['8.8.8.8', '8.8.4.4']
 
@@ -12,8 +11,8 @@ logging.basicConfig(level=logging.INFO,
 
 from pipelines.training_pipeline import train
 
-city    = os.getenv('CITY_NAME', 'Karachi')
-print(f'Starting training for city={city}...')
+city = os.getenv('CITY_NAME', 'Karachi') or 'Karachi'
+print(f'Training for city={city}...')
 results = train(city=city)
 
 print('\n=== Training Results ===')

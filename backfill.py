@@ -1,7 +1,6 @@
 """backfill.py — historical data backfill"""
 import argparse, logging, os, dns.resolver
 
-# Fix DNS
 dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
 dns.resolver.default_resolver.nameservers = ['8.8.8.8', '8.8.4.4']
 
@@ -12,6 +11,11 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
 
+def safe_float(val, default):
+    try:
+        return float(val) if val and str(val).strip() else default
+    except:
+        return default
 
 def backfill(lat, lon, city, days=30):
     from pipelines.fetch_data import fetch_combined
@@ -44,12 +48,16 @@ def backfill(lat, lon, city, days=30):
     logger.info(f'Backfill complete. Total: {total} rows')
     return total
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--days', type=int,   default=30)
-    parser.add_argument('--city', type=str,   default=os.getenv('CITY_NAME','Karachi'))
-    parser.add_argument('--lat',  type=float, default=float(os.getenv('LATITUDE','24.8607')))
-    parser.add_argument('--lon',  type=float, default=float(os.getenv('LONGITUDE','67.0011')))
+    parser.add_argument('--city', type=str,   default=None)
+    parser.add_argument('--lat',  type=float, default=None)
+    parser.add_argument('--lon',  type=float, default=None)
     args = parser.parse_args()
-    backfill(lat=args.lat, lon=args.lon, city=args.city, days=args.days)
+
+    city = args.city or os.getenv('CITY_NAME','Karachi') or 'Karachi'
+    lat  = args.lat  or safe_float(os.getenv('LATITUDE'),  24.8607)
+    lon  = args.lon  or safe_float(os.getenv('LONGITUDE'), 67.0011)
+
+    backfill(lat=lat, lon=lon, city=city, days=args.days)
