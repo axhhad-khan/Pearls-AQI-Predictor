@@ -1,5 +1,5 @@
 """db.py - MongoDB Feature Store + Model Registry"""
-import os, io, logging
+import os, io, logging, sys
 from datetime import datetime
 
 import dns.resolver
@@ -21,7 +21,20 @@ _client = None
 def get_client():
     global _client
     if _client is None:
-        uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+        uri = os.getenv("MONGO_URI", "").strip()
+
+        # ── Validate URI ─────────────────────────────────────────────────────
+        if not uri:
+            logger.error("MONGO_URI is empty! Set it in .env or GitHub Secrets.")
+            sys.exit(1)
+        if "<password>" in uri:
+            logger.error("MONGO_URI still has placeholder <password>! Replace it.")
+            sys.exit(1)
+        if uri == "mongodb+srv://:@":
+            logger.error("MONGO_URI is malformed.")
+            sys.exit(1)
+
+        logger.info(f"Connecting to MongoDB: {uri[:30]}...")
         _client = MongoClient(
             uri,
             serverSelectionTimeoutMS=30000,
@@ -43,8 +56,7 @@ def upsert_features(df: pd.DataFrame, city: str = "default") -> int:
     col.create_index([("city", ASCENDING), ("timestamp", ASCENDING)], unique=True)
 
     records = df.copy()
-    records["city"]      = city
-    # Normalize timestamp to string
+    records["city"] = city
     if pd.api.types.is_datetime64_any_dtype(records["timestamp"]):
         records["timestamp"] = records["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
     else:
@@ -69,11 +81,10 @@ def upsert_features(df: pd.DataFrame, city: str = "default") -> int:
     return inserted
 
 def load_features(city: str = "default", limit: int = 5000) -> pd.DataFrame:
-    db  = get_db()
-    col = db["features"]
+    db   = get_db()
+    col  = db["features"]
     docs = list(col.find({"city": city}, {"_id": 0})
-                   .sort("timestamp", DESCENDING)
-                   .limit(limit))
+                   .sort("timestamp", DESCENDING).limit(limit))
     if not docs:
         return pd.DataFrame()
     df = pd.DataFrame(docs)
