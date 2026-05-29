@@ -6,6 +6,13 @@ on:
     - cron: "0 2 * * *"
   workflow_dispatch:
 
+env:
+  MONGO_URI: "mongodb+srv://root:root@cluster0.buofu8w.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+  MONGO_DB_NAME: "aqi_predictor"
+  CITY_NAME: "Karachi"
+  LATITUDE: "24.8607"
+  LONGITUDE: "67.0011"
+
 jobs:
 
   feature_and_backfill:
@@ -28,15 +35,6 @@ jobs:
       - name: Install dependencies
         run: pip install --upgrade pip && pip install -r requirements.txt
 
-      - name: Create .env file
-        run: |
-          echo "MONGO_URI=mongodb+srv://root:root@cluster0.buofu8w.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0" > .env
-          echo "MONGO_DB_NAME=aqi_predictor" >> .env
-          echo "CITY_NAME=Karachi" >> .env
-          echo "LATITUDE=24.8607" >> .env
-          echo "LONGITUDE=67.0011" >> .env
-          echo ".env created successfully"
-
       - name: Run Feature Pipeline
         run: python run_feature_pipeline.py
 
@@ -48,11 +46,9 @@ jobs:
           python -c "
           from utils.db import load_features
           df = load_features('Karachi', limit=100)
-          print(f'Total rows in DB: {len(df)}')
+          print(f'Total rows: {len(df)}')
           if len(df) > 0:
               print(f'Latest: {df[\"timestamp\"].max()}')
-          else:
-              print('No data found!')
           "
 
   training_pipeline:
@@ -75,14 +71,6 @@ jobs:
       - name: Install dependencies
         run: pip install --upgrade pip && pip install -r requirements.txt
 
-      - name: Create .env file
-        run: |
-          echo "MONGO_URI=mongodb+srv://root:root@cluster0.buofu8w.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0" > .env
-          echo "MONGO_DB_NAME=aqi_predictor" >> .env
-          echo "CITY_NAME=Karachi" >> .env
-          echo "LATITUDE=24.8607" >> .env
-          echo "LONGITUDE=67.0011" >> .env
-
       - name: Run Training Pipeline
         run: python run_training_pipeline.py
 
@@ -90,9 +78,7 @@ jobs:
         run: |
           python -c "
           from utils.db import list_models
-          models = list_models()
-          print('=== Model Results ===')
-          for m in models:
+          for m in list_models():
               if m.get('metrics') and 'error' not in m['metrics'] and m['name'] != 'best_model':
                   print(f'{m[\"name\"]:15s} RMSE={m[\"metrics\"].get(\"RMSE\")} R2={m[\"metrics\"].get(\"R2\")}')
           "
