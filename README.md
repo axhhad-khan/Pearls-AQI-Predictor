@@ -1,10 +1,3 @@
-Zaroor! Aapke project ka idea aur tech stack bohat zabardast hai. Ek professional README mein clear structure, visual elements (jaise badges aur diagrams), aur easy-to-read instructions honi chahiye.
-
-Main ne aapke current README ko ek **top-tier professional format** mein redesign kiya hai. Isme main ne GitHub badges aur **Mermaid diagrams** (jo GitHub natively support karta hai) add kiye hain taake architecture visually appealing lagay.
-
-Aap is code ko copy karke apni `README.md` file mein paste kar sakte hain:
-
-```markdown
 # 🌬️ Pearls AQI Predictor — End-to-End Air Quality Forecasting
 
 ![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
@@ -202,7 +195,3 @@ The dashboard automatically triggers visual alerts for hazardous conditions base
 ---
 
 *Developed with ❤️ by [Ashhad Khan](https://github.com/axhhad-khan).*
-
-```
-
-```
