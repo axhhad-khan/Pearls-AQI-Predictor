@@ -2,18 +2,14 @@ name: AQI Automated Pipelines
 
 on:
   schedule:
-    - cron: "0 * * * *"
-    - cron: "0 2 * * *"
-  workflow_dispatch:
+    - cron: "0 * * * *" # Har ghante automatic chalega
+  workflow_dispatch: # Manual chalane ke liye
 
 jobs:
 
   feature_and_backfill:
     name: "Fetch & Store Features"
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && github.event.schedule == '0 * * * *')
 
     steps:
       - uses: actions/checkout@v4
@@ -46,10 +42,8 @@ jobs:
 
   training_pipeline:
     name: "Train ML Models"
+    needs: feature_and_backfill # Yeh line ensure karegi ke yeh job fetch ke forun baad chale
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && github.event.schedule == '0 2 * * *')
 
     steps:
       - uses: actions/checkout@v4
