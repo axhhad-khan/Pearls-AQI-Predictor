@@ -1,76 +1,3 @@
-# name: AQI Automated Pipelines
-
-# on:
-#   schedule:
-#     - cron: "0 * * * *"
-#     - cron: "0 2 * * *"
-#   workflow_dispatch:
-
-# jobs:
-
-#   feature_and_backfill:
-#     name: "Fetch & Store Features"
-#     runs-on: ubuntu-latest
-#     if: |
-#       github.event_name == 'workflow_dispatch' ||
-#       (github.event_name == 'schedule' && github.event.schedule == '0 * * * *')
-
-#     steps:
-#       - uses: actions/checkout@v4
-
-#       - uses: actions/setup-python@v5
-#         with:
-#           python-version: "3.11"
-#           cache: "pip"
-
-#       - name: Install dependencies
-#         run: pip install --upgrade pip && pip install -r requirements.txt
-
-#       - name: Run Feature Pipeline
-#         env:
-#           MONGO_URI: "mongodb+srv://root:root@cluster0.buofu8w.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-#           MONGO_DB_NAME: "aqi_predictor"
-#           CITY_NAME: "Karachi"
-#           LATITUDE: "24.8607"
-#           LONGITUDE: "67.0011"
-#         run: python run_feature_pipeline.py
-
-#       - name: Run Backfill 7 days
-#         env:
-#           MONGO_URI: "mongodb+srv://root:root@cluster0.buofu8w.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-#           MONGO_DB_NAME: "aqi_predictor"
-#           CITY_NAME: "Karachi"
-#           LATITUDE: "24.8607"
-#           LONGITUDE: "67.0011"
-#         run: python backfill.py --days 7
-
-#   training_pipeline:
-#     name: "Train ML Models"
-#     runs-on: ubuntu-latest
-#     if: |
-#       github.event_name == 'workflow_dispatch' ||
-#       (github.event_name == 'schedule' && github.event.schedule == '0 2 * * *')
-
-#     steps:
-#       - uses: actions/checkout@v4
-
-#       - uses: actions/setup-python@v5
-#         with:
-#           python-version: "3.11"
-#           cache: "pip"
-
-#       - name: Install dependencies
-#         run: pip install --upgrade pip && pip install -r requirements.txt
-
-#       - name: Run Training Pipeline
-#         env:
-#           MONGO_URI: "mongodb+srv://root:root@cluster0.buofu8w.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-#           MONGO_DB_NAME: "aqi_predictor"
-#           CITY_NAME: "Karachi"
-#           LATITUDE: "24.8607"
-#           LONGITUDE: "67.0011"
-#         run: python run_training_pipeline.py
-
 name: AQI Automated Pipelines
 
 on:
@@ -79,7 +6,6 @@ on:
   workflow_dispatch: # Manual chalane ke liye
 
 jobs:
-
   feature_and_backfill:
     name: "Fetch & Store Features"
     runs-on: ubuntu-latest

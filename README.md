@@ -1,4 +1,4 @@
-# 🌬️ Pearls AQI Predictor — End-to-End Air Quality Forecasting
+# Pearls AQI Predictor — End-to-End Air Quality Forecasting
 
 ![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
 ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat&logo=Streamlit&logoColor=white)
